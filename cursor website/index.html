@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizzy's Cafe</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Wizzy's Cafe</h1>
+            <p class="subtitle">Explore your music taste</p>
+        </header>
+
+        <div class="main-content">
+            <div class="controls-section">
+                <div class="control-box">
+                    <button id="genresBtn">Genres</button>
+                    <button id="getTracksBtn" class="get-tracks">Get Tracks</button>
+                </div>
+                
+                <div class="control-box">
+                    <button id="artistsBtn">Artists</button>
+                    <button id="getArtistTracksBtn" class="get-tracks">Get Tracks</button>
+                </div>
+            </div>
+
+            <div class="tracks-section">
+                <h2>Top Tracks</h2>
+                <div id="tracksList" class="tracks-list">
+                    <!-- Tracks will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <h3>About</h3>
+        </footer>
+    </div>
+    <script src="spotify-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html> 
