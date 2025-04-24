@@ -1,5 +1,5 @@
 // Replace these with your Spotify API credentials
-const CLIENT_ID = 'YOUR_CLIENT_ID';
+const CLIENT_ID = 'c3c19dff480e4750965d78c295254bbf';
 const REDIRECT_URI = window.location.origin; // This will automatically use your Vercel deployment URL
 
 // Spotify API endpoints
