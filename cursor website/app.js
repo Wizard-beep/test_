@@ -1,20 +1,36 @@
 // DOM Elements
-const genresBtn = document.getElementById('genresBtn');
-const artistsBtn = document.getElementById('artistsBtn');
+const genreSelect = document.getElementById('genreSelect');
+const artistSelect = document.getElementById('artistSelect');
 const getTracksBtn = document.getElementById('getTracksBtn');
 const getArtistTracksBtn = document.getElementById('getArtistTracksBtn');
 const tracksList = document.getElementById('tracksList');
 
-let selectedGenre = null;
-let selectedArtist = null;
+// Player Elements
+const playPauseButton = document.getElementById('playPauseButton');
+const playPauseIcon = document.getElementById('playPauseIcon');
+const previousButton = document.getElementById('previousButton');
+const nextButton = document.getElementById('nextButton');
+const progressBar = document.getElementById('progressBar');
+const progress = document.getElementById('progress');
+const volumeSlider = document.getElementById('volumeSlider');
+const volumeProgress = document.getElementById('volumeProgress');
+const currentTrackImg = document.getElementById('currentTrackImg');
+const currentTrackName = document.getElementById('currentTrackName');
+const currentTrackArtist = document.getElementById('currentTrackArtist');
+
+let currentTracks = [];
+let currentTrackIndex = 0;
+let isPlaying = false;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
     initializeSpotifyAuth();
+    loadGenres();
+    loadTopArtists();
+    setupPlayerControls();
 });
 
-// Event Listeners
-genresBtn.addEventListener('click', async () => {
+async function loadGenres() {
     const token = getAccessToken();
     if (!token) return;
 
@@ -26,19 +42,146 @@ genresBtn.addEventListener('click', async () => {
         });
         const data = await response.json();
         
-        // Create and show genres modal
-        showGenresModal(data.genres);
+        genreSelect.innerHTML = `
+            <option value="">Select Genre</option>
+            ${data.genres.map(genre => `
+                <option value="${genre}">${genre.charAt(0).toUpperCase() + genre.slice(1)}</option>
+            `).join('')}
+        `;
     } catch (error) {
-        console.error('Error fetching genres:', error);
+        console.error('Error loading genres:', error);
     }
-});
+}
 
-artistsBtn.addEventListener('click', () => {
-    // Create and show artist search modal
-    showArtistSearchModal();
-});
+async function loadTopArtists() {
+    const token = getAccessToken();
+    if (!token) return;
 
+    try {
+        const response = await fetch(`${SPOTIFY_API_BASE}/me/top/artists?limit=20`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const data = await response.json();
+        
+        artistSelect.innerHTML = `
+            <option value="">Select Artist</option>
+            ${data.items.map(artist => `
+                <option value="${artist.id}">${artist.name}</option>
+            `).join('')}
+        `;
+    } catch (error) {
+        console.error('Error loading artists:', error);
+    }
+}
+
+function setupPlayerControls() {
+    playPauseButton.addEventListener('click', togglePlayPause);
+    previousButton.addEventListener('click', playPreviousTrack);
+    nextButton.addEventListener('click', playNextTrack);
+    
+    // Progress bar control
+    progressBar.addEventListener('click', (e) => {
+        const rect = progressBar.getBoundingClientRect();
+        const percent = (e.clientX - rect.left) / rect.width;
+        if (window.spotifyPlayer) {
+            window.spotifyPlayer.seek(percent * currentDuration);
+        }
+    });
+
+    // Volume control
+    volumeSlider.addEventListener('click', (e) => {
+        const rect = volumeSlider.getBoundingClientRect();
+        const percent = (e.clientX - rect.left) / rect.width;
+        if (window.spotifyPlayer) {
+            window.spotifyPlayer.setVolume(percent);
+            volumeProgress.style.width = `${percent * 100}%`;
+        }
+    });
+}
+
+async function togglePlayPause() {
+    if (!window.spotifyPlayer) return;
+
+    const state = await window.spotifyPlayer.getCurrentState();
+    if (!state) return;
+
+    if (state.paused) {
+        window.spotifyPlayer.resume();
+        playPauseIcon.className = 'fas fa-pause';
+    } else {
+        window.spotifyPlayer.pause();
+        playPauseIcon.className = 'fas fa-play';
+    }
+}
+
+async function playTrack(track) {
+    if (!window.spotifyPlayer || !window.deviceId) return;
+
+    const token = getAccessToken();
+    if (!token) return;
+
+    try {
+        await fetch(`${SPOTIFY_API_BASE}/me/player/play?device_id=${window.deviceId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                uris: [track.uri]
+            })
+        });
+
+        updateNowPlaying(track);
+        playPauseIcon.className = 'fas fa-pause';
+        isPlaying = true;
+    } catch (error) {
+        console.error('Error playing track:', error);
+    }
+}
+
+function updateNowPlaying(track) {
+    currentTrackImg.src = track.album.images[1].url;
+    currentTrackName.textContent = track.name;
+    currentTrackArtist.textContent = track.artists.map(artist => artist.name).join(', ');
+}
+
+function updatePlaybackState(state) {
+    // Update progress bar
+    if (state.duration) {
+        const percent = (state.position / state.duration) * 100;
+        progress.style.width = `${percent}%`;
+    }
+
+    // Update play/pause button
+    playPauseIcon.className = state.paused ? 'fas fa-play' : 'fas fa-pause';
+
+    // Update track info if changed
+    if (state.track_window?.current_track) {
+        const track = state.track_window.current_track;
+        updateNowPlaying(track);
+    }
+}
+
+async function playPreviousTrack() {
+    if (currentTrackIndex > 0) {
+        currentTrackIndex--;
+        await playTrack(currentTracks[currentTrackIndex]);
+    }
+}
+
+async function playNextTrack() {
+    if (currentTrackIndex < currentTracks.length - 1) {
+        currentTrackIndex++;
+        await playTrack(currentTracks[currentTrackIndex]);
+    }
+}
+
+// Event Listeners for track selection
 getTracksBtn.addEventListener('click', async () => {
+    const selectedGenre = genreSelect.value;
     if (!selectedGenre) {
         alert('Please select a genre first');
         return;
@@ -47,114 +190,13 @@ getTracksBtn.addEventListener('click', async () => {
 });
 
 getArtistTracksBtn.addEventListener('click', async () => {
+    const selectedArtist = artistSelect.value;
     if (!selectedArtist) {
         alert('Please select an artist first');
         return;
     }
     await fetchArtistTopTracks(selectedArtist);
 });
-
-// Helper Functions
-function showGenresModal(genres) {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h3>Select a Genre</h3>
-            <div class="genres-list">
-                ${genres.map(genre => `
-                    <button class="genre-btn" data-genre="${genre}">
-                        ${genre}
-                    </button>
-                `).join('')}
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    // Add click events to genre buttons
-    modal.querySelectorAll('.genre-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            selectedGenre = btn.dataset.genre;
-            genresBtn.textContent = selectedGenre;
-            document.body.removeChild(modal);
-        });
-    });
-
-    // Close modal when clicking outside
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            document.body.removeChild(modal);
-        }
-    });
-}
-
-function showArtistSearchModal() {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h3>Search for an Artist</h3>
-            <input type="text" id="artistSearch" placeholder="Enter artist name...">
-            <div id="artistResults" class="artist-results"></div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    const searchInput = modal.querySelector('#artistSearch');
-    const resultsDiv = modal.querySelector('#artistResults');
-
-    let debounceTimeout;
-    searchInput.addEventListener('input', (e) => {
-        clearTimeout(debounceTimeout);
-        debounceTimeout = setTimeout(() => {
-            searchArtists(e.target.value, resultsDiv);
-        }, 300);
-    });
-
-    // Close modal when clicking outside
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            document.body.removeChild(modal);
-        }
-    });
-}
-
-async function searchArtists(query, resultsDiv) {
-    if (!query) return;
-
-    const token = getAccessToken();
-    if (!token) return;
-
-    try {
-        const response = await fetch(`${SPOTIFY_API_BASE}/search?q=${encodeURIComponent(query)}&type=artist&limit=5`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        const data = await response.json();
-
-        resultsDiv.innerHTML = data.artists.items.map(artist => `
-            <div class="artist-result" data-artist-id="${artist.id}">
-                <img src="${artist.images[2]?.url || 'placeholder.jpg'}" alt="${artist.name}">
-                <span>${artist.name}</span>
-            </div>
-        `).join('');
-
-        // Add click events to artist results
-        resultsDiv.querySelectorAll('.artist-result').forEach(result => {
-            result.addEventListener('click', () => {
-                selectedArtist = result.dataset.artistId;
-                artistsBtn.textContent = result.querySelector('span').textContent;
-                document.body.removeChild(result.closest('.modal'));
-            });
-        });
-    } catch (error) {
-        console.error('Error searching artists:', error);
-    }
-}
 
 async function fetchTracksByGenre(genre) {
     const token = getAccessToken();
@@ -167,9 +209,11 @@ async function fetchTracksByGenre(genre) {
             }
         });
         const data = await response.json();
+        currentTracks = data.tracks;
         displayTracks(data.tracks);
     } catch (error) {
         console.error('Error fetching tracks:', error);
+        tracksList.innerHTML = '<p class="error">Error loading tracks. Please try again.</p>';
     }
 }
 
@@ -184,18 +228,25 @@ async function fetchArtistTopTracks(artistId) {
             }
         });
         const data = await response.json();
+        currentTracks = data.tracks;
         displayTracks(data.tracks);
     } catch (error) {
         console.error('Error fetching artist tracks:', error);
+        tracksList.innerHTML = '<p class="error">Error loading tracks. Please try again.</p>';
     }
 }
 
 function displayTracks(tracks) {
-    tracksList.innerHTML = tracks.map(track => `
-        <div class="track-item">
-            <img src="${track.album.images[2].url}" alt="${track.name}" width="64" height="64">
+    if (!tracks || tracks.length === 0) {
+        tracksList.innerHTML = '<p>No tracks found</p>';
+        return;
+    }
+
+    tracksList.innerHTML = tracks.map((track, index) => `
+        <div class="track-item" onclick="playTrack(currentTracks[${index}])">
+            <img src="${track.album.images[2]?.url || 'placeholder.jpg'}" alt="${track.name}" width="64" height="64">
             <div class="track-info">
-                <h4>${track.name}</h4>
+                <h4>${index + 1}. ${track.name}</h4>
                 <p>${track.artists.map(artist => artist.name).join(', ')}</p>
             </div>
         </div>
