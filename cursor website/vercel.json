@@ -6,17 +6,6 @@
             "use": "@vercel/static"
         }
     ],
-    "routes": [
-        {
-            "src": "/(.+\\.js)",
-            "headers": { "Content-Type": "application/javascript" },
-            "dest": "/$1"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "/$1"
-        }
-    ],
     "headers": [
         {
             "source": "/(.*)",
@@ -28,13 +17,21 @@
             ]
         },
         {
-            "source": "/(.+\\.(?:css|js))",
+            "source": "/(.+\\.(js|css))",
             "headers": [
                 {
                     "key": "Content-Type",
-                    "value": "text/css; charset=utf-8"
+                    "value": "application/javascript"
                 }
             ]
+        }
+    ],
+    "cleanUrls": true,
+    "trailingSlash": false,
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/$1"
         }
     ]
 } 
