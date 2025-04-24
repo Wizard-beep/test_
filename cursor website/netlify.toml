@@ -1,0 +1,14 @@
+[build]
+  publish = "/"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    Content-Security-Policy = "default-src 'self' https://sdk.scdn.co https://api.spotify.com https://accounts.spotify.com; script-src 'self' 'unsafe-inline' https://sdk.scdn.co; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' https://*.scdn.co data:; font-src 'self' https://cdnjs.cloudflare.com;"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200 
