@@ -1,6 +1,6 @@
 // Replace these with your Spotify API credentials
-const CLIENT_ID = 'YOUR_CLIENT_ID';
-const REDIRECT_URI = 'http://localhost:5500'; // Update this to match your deployment URL
+const CLIENT_ID = '5c3887bb7c014393b540e8ffe41ffa38';
+const REDIRECT_URI = 'https://wizzyscafe-git-main-wizard-beeps-projects.vercel.app/'; // Update this to match your deployment URL
 
 // Spotify API endpoints
 const SPOTIFY_AUTH_ENDPOINT = 'https://accounts.spotify.com/authorize';
