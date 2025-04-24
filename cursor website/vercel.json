@@ -2,7 +2,7 @@
     "version": 2,
     "builds": [
         {
-            "src": "*.html",
+            "src": "**/*",
             "use": "@vercel/static"
         }
     ],
@@ -10,6 +10,26 @@
         {
             "src": "/(.*)",
             "dest": "/$1"
+        }
+    ],
+    "headers": [
+        {
+            "source": "/(.*)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=0, must-revalidate"
+                }
+            ]
+        },
+        {
+            "source": "/(.+\\.(?:css|js))",
+            "headers": [
+                {
+                    "key": "Content-Type",
+                    "value": "text/css; charset=utf-8"
+                }
+            ]
         }
     ]
 } 
